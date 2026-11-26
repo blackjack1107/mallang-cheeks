@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>말랑볼 — 사진 속 볼을 쭉 늘려 보는 장난감</title>
+<meta name="description" content="사진 속 볼을 잡아당겼다 놓으면 말랑하게 튕겨 돌아오는 브라우저 장난감. 설치·가입 없이, 사진은 기기 밖으로 나가지 않아요.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M8 36c0-16 10-26 24-26s24 10 24 26-12 20-24 20S8 52 8 36z' fill='%235b4bdb'/%3E%3Ccircle cx='24' cy='32' r='4' fill='%23fff'/%3E%3Ccircle cx='40' cy='32' r='4' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 64 64" width="34" height="34" aria-hidden="true">
+      <path d="M8 36c0-16 10-26 24-26s24 10 24 26-12 20-24 20S8 52 8 36z" fill="#5b4bdb"/>
+      <circle cx="24" cy="32" r="4" fill="#fff"/><circle cx="40" cy="32" r="4" fill="#fff"/>
+      <path d="M27 42q5 4 10 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <h1 data-i18n="title">말랑볼</h1>
+      <p data-i18n="tagline">사진 속 볼을 쭉 늘렸다 놓는 장난감</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button id="btnUndo" class="icon-btn" data-i18n-title="undo" title="되돌리기" disabled>
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M9 7 4 12l5 5M4 12h10a6 6 0 0 1 0 12h-2" transform="translate(0 -3)" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button id="btnSound" class="icon-btn" data-i18n-title="sound" title="효과음" aria-pressed="true">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="mute" d="m16 9 5 6m0-6-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <select id="lang" aria-label="Language">
+      <option value="ko">한국어</option>
+      <option value="en">English</option>
+      <option value="ja">日本語</option>
+    </select>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="stage-card">
+    <div class="stage" id="stage">
+      <canvas id="gl" width="720" height="1280"></canvas>
+      <canvas id="overlay" width="720" height="1280"></canvas>
+      <div class="hint" id="hint" data-i18n="hintPlay">말랑한 곳을 잡고 쭉 당겼다 놓아 보세요</div>
+      <div class="rec-badge" id="recBadge" hidden><i></i><span id="recTime">0:00</span></div>
+      <div class="drop-veil" id="dropVeil" data-i18n="dropHere">여기에 놓으면 불러와요</div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="card">
+      <div class="row">
+        <button class="btn primary grow" id="btnLoad" data-i18n="load">사진 불러오기</button>
+        <button class="btn" id="btnSample" data-i18n="sample">샘플</button>
+      </div>
+      <p class="note" data-i18n="loadNote">끌어다 놓기 · 붙여넣기도 돼요 (JPG, PNG, WebP, GIF)</p>
+      <input type="file" id="file" accept="image/*" hidden>
+    </div>
+
+    <div class="card">
+      <div class="seg" role="tablist" id="modeTabs">
+        <button role="tab" data-mode="play" class="on" data-i18n="tabPlay">말랑말랑</button>
+        <button role="tab" data-mode="circles" data-i18n="tabCircles">볼 맞추기</button>
+        <button role="tab" data-mode="paint" data-i18n="tabPaint">칠하기</button>
+      </div>
+
+      <div class="mode-pane" data-pane="play">
+        <div class="row wrap">
+          <button class="btn rec grow" id="btnRec"><i class="dot"></i><span data-i18n="rec">녹화</span></button>
+          <button class="btn grow" id="btnAuto" data-i18n="auto">자동으로 당기기</button>
+          <button class="btn grow" id="btnPng" data-i18n="png">PNG 저장</button>
+        </div>
+        <p class="note" data-i18n="playNote">두 손가락으로 양쪽을 한꺼번에 당길 수 있어요. 녹화는 최대 15초.</p>
+      </div>
+
+      <div class="mode-pane" data-pane="circles" hidden>
+        <p class="note" data-i18n="circlesNote">점선 원 두 개를 양쪽 볼 위로 옮기세요. 테두리를 끌면 그 원만 크기가 바뀌어요.</p>
+        <label class="slider"><span data-i18n="cheekSize">볼 크기</span><input type="range" id="cheekSize" min="6" max="45" value="20"></label>
+        <button class="btn primary block" data-done data-i18n="done">완료, 늘려 보기 →</button>
+      </div>
+
+      <div class="mode-pane" data-pane="paint" hidden>
+        <p class="note" data-i18n="paintNote">말랑하게 만들 곳을 직접 칠하세요.</p>
+        <div class="row">
+          <div class="seg small grow" id="brushTool">
+            <button data-tool="brush" class="on" data-i18n="brush">브러시</button>
+            <button data-tool="erase" data-i18n="eraser">지우개</button>
+          </div>
+        </div>
+        <label class="slider"><span data-i18n="brushSize">굵기</span><input type="range" id="brushSize" min="4" max="40" value="14"></label>
+        <div class="row wrap">
+          <button class="btn grow" id="btnFill" data-i18n="fillAll">사진 전체를 말랑하게</button>
+          <button class="btn grow" id="btnClear" data-i18n="clearPaint">칠한 것 지우기</button>
+        </div>
+        <label class="check"><input type="checkbox" id="useCircles" checked><span data-i18n="useCircles">볼 원도 함께 쓰기</span></label>
+        <button class="btn primary block" data-done data-i18n="done">완료, 늘려 보기 →</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="bg">배경</h2>
+      <div class="swatches" id="swatches"></div>
+      <h2 data-i18n="ratio">화면 비율</h2>
+      <div class="seg small" id="ratio">
+        <button data-ratio="9:16" class="on">9:16</button>
+        <button data-ratio="1:1">1:1</button>
+        <button data-ratio="4:5">4:5</button>
+      </div>
+    </div>
+
+    <details class="card" id="settings">
+      <summary data-i18n="settings">말랑함 설정</summary>
+      <label class="slider"><span data-i18n="sSoft">말랑함</span><input type="range" id="sSoft" min="0" max="100" value="55"></label>
+      <label class="slider"><span data-i18n="sJiggle">출렁임</span><input type="range" id="sJiggle" min="0" max="100" value="65"></label>
+      <label class="slider"><span data-i18n="sReach">잡히는 범위</span><input type="range" id="sReach" min="0" max="100" value="45"></label>
+      <label class="slider"><span data-i18n="sStretch">늘어나는 길이</span><input type="range" id="sStretch" min="0" max="100" value="50"></label>
+      <button class="btn block" id="btnResetSet" data-i18n="resetSet">기본값으로</button>
+    </details>
+  </aside>
+</main>
+
+<section class="info">
+  <ol>
+    <li data-i18n="how1">사진을 고르거나 샘플로 바로 시작해요.</li>
+    <li data-i18n="how2">원 두 개를 볼에 맞추거나, 말랑할 곳을 칠해요.</li>
+    <li data-i18n="how3">잡고, 당기고, 놓으세요. 마음에 들면 녹화해서 저장!</li>
+  </ol>
+  <p data-i18n="privacy">사진은 브라우저 안에서만 처리되고 어디에도 업로드되지 않아요.</p>
+  <p class="credit" data-i18n="credit">볼을 늘리는 웹 장난감이라는 아이디어에서 영감을 받아 코드와 그림을 처음부터 새로 만든 비공식 프로젝트입니다.</p>
+</section>
+
+<dialog id="result">
+  <h2 data-i18n="resultTitle">녹화 완료</h2>
+  <video id="resultVideo" playsinline loop muted autoplay controls></video>
+  <img id="resultGif" alt="" hidden>
+  <p class="note" id="resultInfo"></p>
+  <div class="row wrap">
+    <a class="btn primary grow" id="dlVideo" data-i18n="saveVideo">영상 저장</a>
+    <button class="btn grow" id="btnGif" data-i18n="makeGif">GIF도 만들기</button>
+    <a class="btn grow" id="dlGif" hidden data-i18n="saveGif">GIF 저장</a>
+    <button class="btn grow" id="btnShare" hidden data-i18n="share">공유…</button>
+    <button class="btn grow" id="btnClose" data-i18n="close">닫기</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/i18n.js"></script>
+<script src="js/sample.js"></script>
+<script src="js/gif.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
